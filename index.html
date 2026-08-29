@@ -345,7 +345,7 @@ const hasArtifactStorage = (typeof window !== 'undefined') && !!window.storage &
    the server side of that proxy; it is never shipped to the browser.
    Leave this as '' to fall back to a personal-API-key Settings screen
    instead (each person supplies their own free Gemini key). */
-const PROXY_URL = 'https://logwise-proxy.maavii91.workers.dev';
+const PROXY_URL = '';
 const needsOwnKey = !hasArtifactStorage && !PROXY_URL;
 
 async function storageGet(key){
