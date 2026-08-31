@@ -1,0 +1,1715 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Logwise — Log · Reflect · Improve</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<!-- Optional: only used when FIREBASE_CONFIG (in the script below) is filled in, for cross-device login + sync -->
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
+<style>
+  :root[data-theme="dark"]{
+    --bg:#0A0E17; --surface:#111827; --surface-2:#1A2233; --surface-3:#232C40;
+    --border:#2A3349; --border-soft:#1F2839;
+    --text:#E8ECF6; --text-dim:#8B93A8; --text-faint:#5C6478;
+    --blue:#3B7CF6; --blue-2:#6EA6FF; --blue-dim:rgba(59,124,246,0.14);
+    --green:#2ECC71; --green-dim:rgba(46,204,113,0.12);
+    --red:#F0554D; --red-dim:rgba(240,85,77,0.12);
+    --shadow:0 12px 32px rgba(0,0,0,0.4);
+  }
+  :root[data-theme="light"]{
+    --bg:#F1F4FA; --surface:#FFFFFF; --surface-2:#F6F8FC; --surface-3:#EBEFF7;
+    --border:#DFE4EF; --border-soft:#E9ECF4;
+    --text:#131826; --text-dim:#5B6478; --text-faint:#98A1B5;
+    --blue:#2F5FD8; --blue-2:#3B7CF6; --blue-dim:rgba(47,95,216,0.08);
+    --green:#1FA463; --green-dim:rgba(31,164,99,0.09);
+    --red:#D63C34; --red-dim:rgba(214,60,52,0.09);
+    --shadow:0 12px 28px rgba(20,24,36,0.10);
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font-family:'Inter',sans-serif; -webkit-font-smoothing:antialiased;
+    transition:background .2s ease,color .2s ease;
+  }
+  ::selection{background:var(--blue-dim);}
+  .mono{font-family:'JetBrains Mono',monospace; font-variant-numeric:tabular-nums;}
+  .display{font-family:'Space Grotesk',sans-serif;}
+  button{font-family:inherit; cursor:pointer;}
+  input,select,textarea{font-family:inherit; color:var(--text); background:var(--surface-2); border:1px solid var(--border); border-radius:8px; padding:9px 11px; font-size:13.5px; outline:none; transition:border-color .15s;}
+  input:focus,select:focus,textarea:focus{border-color:var(--blue);}
+  input::placeholder,textarea::placeholder{color:var(--text-faint);}
+  .app-shell{display:flex; min-height:100vh;}
+
+  /* ---------- Sidebar ---------- */
+  .sidebar{
+    width:236px; flex-shrink:0; background:var(--surface); border-right:1px solid var(--border);
+    display:flex; flex-direction:column; padding:20px 14px; position:sticky; top:0;
+    height:100vh; height:100dvh; /* dvh accounts for mobile browser chrome (address bar) so content never hides below the fold */
+    overflow-y:auto; /* fallback: if content is still taller than the viewport, it scrolls instead of disappearing */
+  }
+  .brand{display:flex; align-items:center; gap:9px; padding:4px 6px 18px 6px; border-bottom:1px solid var(--border-soft); margin-bottom:14px;}
+  .brand svg{flex-shrink:0;}
+  .brand-text{display:flex; flex-direction:column; gap:3px;}
+  .brand-word{font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:19px; letter-spacing:-0.02em; line-height:1;}
+  .brand-word span{color:var(--blue);}
+  .brand-tagline{font-size:8px; letter-spacing:.16em; color:var(--text-faint); text-transform:uppercase; font-weight:600;}
+  .header-slogan{font-size:10.5px; letter-spacing:.14em; color:var(--text-faint); text-transform:uppercase; font-weight:600; margin-top:4px;}
+  .nav-group-label{font-size:10.5px; text-transform:uppercase; letter-spacing:.09em; color:var(--text-faint); padding:14px 10px 6px;}
+  .nav-btn{
+    display:flex; align-items:center; gap:10px; width:100%; text-align:left; padding:9px 10px;
+    border-radius:9px; border:none; background:transparent; color:var(--text-dim); font-size:13.5px; font-weight:500;
+    margin-bottom:2px; transition:background .12s, color .12s;
+  }
+  .nav-btn svg{flex-shrink:0; opacity:.85;}
+  .nav-btn:hover{background:var(--surface-2); color:var(--text);}
+  .nav-btn.active{background:var(--blue-dim); color:var(--blue-2); font-weight:600;}
+  .nav-btn.active svg{opacity:1;}
+  .market-toggle{display:flex; background:var(--surface-2); border:1px solid var(--border); border-radius:10px; padding:3px; margin-bottom:8px;}
+  .market-toggle button{flex:1; padding:7px 0; border:none; background:transparent; border-radius:7px; font-size:12.5px; font-weight:600; color:var(--text-dim);}
+  .market-toggle button.active{background:var(--blue); color:#fff;}
+  .sidebar-spacer{flex:1;}
+  .theme-toggle{display:flex; align-items:center; justify-content:space-between; padding:10px 10px; border-radius:9px; background:var(--surface-2); border:1px solid var(--border);}
+  .theme-toggle-btn{display:flex; align-items:center; gap:6px; border:none; background:none; color:var(--text-dim); font-size:12px; font-weight:600; padding:5px 8px; border-radius:6px;}
+  .theme-toggle-btn.active{background:var(--surface-3); color:var(--text);}
+
+  /* ---------- Main ---------- */
+  .main{flex:1; padding:26px 34px 60px; max-width:1180px;}
+  .page-header{display:flex; align-items:baseline; justify-content:space-between; margin-bottom:20px; flex-wrap:wrap; gap:10px;}
+  .page-title{font-family:'Space Grotesk',sans-serif; font-size:22px; font-weight:700; letter-spacing:-0.01em;}
+  .page-sub{color:var(--text-dim); font-size:13px; margin-top:3px;}
+  .pill{display:inline-flex; align-items:center; gap:5px; font-size:11px; font-weight:600; padding:3px 9px; border-radius:99px; text-transform:uppercase; letter-spacing:.04em;}
+  .pill-crypto{background:var(--blue-dim); color:var(--blue-2);}
+  .pill-fx{background:var(--green-dim); color:var(--green);}
+
+  .card{background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:20px; box-shadow:var(--shadow);}
+  .card + .card{margin-top:18px;}
+
+  /* Dropzone */
+  .dropzone{
+    border:1.5px dashed var(--border); border-radius:14px; background:var(--surface-2);
+    padding:30px 20px; text-align:center; transition:border-color .15s, background .15s; cursor:pointer;
+  }
+  .dropzone.dragover{border-color:var(--blue); background:var(--blue-dim);}
+  .dropzone svg{margin-bottom:8px; opacity:.7;}
+  .dropzone-title{font-weight:600; font-size:14px;}
+  .dropzone-sub{color:var(--text-dim); font-size:12.5px; margin-top:4px;}
+  .dz-status{margin-top:12px; font-size:12.5px; color:var(--blue-2); display:none;}
+  .dz-status.show{display:block;}
+  .dz-status.error{color:var(--red);}
+
+  /* Trade list — card layout so every field is visible without clicking in */
+  .trade-row{
+    border-radius:10px; border:1px solid transparent; cursor:pointer;
+    padding:12px 14px; transition:background .12s,border-color .12s; margin-bottom:6px;
+  }
+  .trade-row:hover{background:var(--surface-2); border-color:var(--border);}
+  .tc-top{display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap;}
+  .tc-left{display:flex; align-items:center; gap:8px; flex-wrap:wrap;}
+  .tc-symbol{font-weight:700; font-size:14px;}
+  .tc-date{color:var(--text-faint); font-size:11px; font-family:'JetBrains Mono',monospace;}
+  .tc-right{display:flex; align-items:center; gap:8px; flex-shrink:0;}
+  .tc-meta{display:flex; flex-wrap:wrap; gap:6px 14px; margin-top:9px;}
+  .tc-meta-item{font-size:12px; color:var(--text-dim); white-space:nowrap;}
+  .tc-meta-item .k{color:var(--text-faint); margin-right:4px;}
+  .tc-meta-item .v{font-family:'JetBrains Mono',monospace; color:var(--text); font-weight:500;}
+  .tc-pnl-row{margin-top:9px; display:flex; align-items:center; gap:7px;}
+  .tc-pnl-label{font-size:10px; text-transform:uppercase; letter-spacing:.05em; color:var(--text-faint); font-weight:700;}
+  .tc-pnl-val{font-family:'JetBrains Mono',monospace; font-weight:700; font-size:15px;}
+  .del-btn{background:none; border:none; color:var(--text-faint); width:26px; height:26px; display:flex; align-items:center; justify-content:center; border-radius:7px; flex-shrink:0;}
+  .del-btn:hover{background:var(--red-dim); color:var(--red);}
+  .side-tag{font-size:11px; font-weight:700; padding:2px 7px; border-radius:6px; width:fit-content;}
+  .side-long{background:var(--green-dim); color:var(--green);}
+  .side-short{background:var(--red-dim); color:var(--red);}
+  .pnl-pos{color:var(--green);}
+  .pnl-neg{color:var(--red);}
+  .review-badge{font-size:10.5px; font-weight:600; padding:2px 8px; border-radius:99px; white-space:nowrap;}
+  .review-done{background:var(--green-dim); color:var(--green);}
+  .review-pending{background:var(--surface-3); color:var(--text-faint);}
+  .empty-state{text-align:center; padding:36px 10px; color:var(--text-dim);}
+  .empty-state svg{opacity:.4; margin-bottom:10px;}
+
+  /* Form grid */
+  .form-grid{display:grid; grid-template-columns:1fr 1fr; gap:14px 16px;}
+  .field{display:flex; flex-direction:column; gap:5px;}
+  .field label{font-size:12px; font-weight:600; color:var(--text-dim);}
+  .field-full{grid-column:1 / -1;}
+  .section-label{font-size:11px; text-transform:uppercase; letter-spacing:.08em; color:var(--text-faint); font-weight:700; margin:20px 0 10px; padding-top:14px; border-top:1px solid var(--border-soft);}
+  .section-label:first-child{margin-top:0; padding-top:0; border-top:none;}
+
+  .btn{border:none; border-radius:9px; padding:10px 18px; font-size:13.5px; font-weight:600; transition:opacity .15s, transform .1s;}
+  .btn:active{transform:scale(.98);}
+  .btn-primary{background:var(--blue); color:#fff;}
+  .btn-primary:disabled{opacity:.35; cursor:not-allowed;}
+  .btn-ghost{background:var(--surface-2); color:var(--text-dim); border:1px solid var(--border);}
+  .btn-danger{background:var(--red-dim); color:var(--red); border:1px solid transparent;}
+
+  /* Checkbox pair */
+  .check-row{display:flex; align-items:center; gap:8px; font-size:13.5px; padding:9px 4px; cursor:pointer; user-select:none;}
+  .check-box{width:17px; height:17px; border-radius:5px; border:1.5px solid var(--border); flex-shrink:0; display:flex; align-items:center; justify-content:center; background:var(--surface-2);}
+  .check-box.checked{background:var(--blue); border-color:var(--blue);}
+  .check-box.checked::after{content:''; width:7px; height:4px; border-left:2px solid #fff; border-bottom:2px solid #fff; transform:rotate(-45deg) translate(1px,-1px);}
+
+  /* Calendar */
+  .cal-nav{display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;}
+  .cal-nav-btns{display:flex; gap:4px;}
+  .icon-btn{background:var(--surface-2); border:1px solid var(--border); border-radius:8px; width:30px; height:30px; display:flex; align-items:center; justify-content:center; color:var(--text-dim); flex-shrink:0;}
+  .icon-btn:hover{color:var(--text); border-color:var(--blue);}
+  .cal-grid{display:grid; grid-template-columns:repeat(7,1fr); gap:6px;}
+  .cal-dow{text-align:center; font-size:10.5px; color:var(--text-faint); text-transform:uppercase; letter-spacing:.06em; padding-bottom:4px;}
+  .cal-cell{aspect-ratio:1/0.82; border-radius:10px; border:1px solid var(--border-soft); background:var(--surface-2); padding:7px 8px; font-size:11px; cursor:default; display:flex; flex-direction:column; justify-content:space-between; transition:transform .1s, border-color .1s;}
+  .cal-cell.has-trades{cursor:pointer;}
+  .cal-cell.has-trades:hover{transform:translateY(-2px); border-color:var(--blue);}
+  .cal-cell.empty{background:transparent; border-color:transparent;}
+  .cal-cell.win{background:var(--green-dim); border-color:transparent;}
+  .cal-cell.loss{background:var(--red-dim); border-color:transparent;}
+  .cal-daynum{color:var(--text-dim); font-weight:600;}
+  .cal-cell.win .cal-daynum{color:var(--green);}
+  .cal-cell.loss .cal-daynum{color:var(--red);}
+  .cal-pnl{font-family:'JetBrains Mono',monospace; font-weight:600; font-size:12px;}
+  .cal-count{color:var(--text-faint); font-size:10px;}
+
+  .stat-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-top:14px;}
+  .stat-box{background:var(--surface-2); border:1px solid var(--border-soft); border-radius:10px; padding:12px 14px;}
+  .stat-label{font-size:10.5px; color:var(--text-faint); text-transform:uppercase; letter-spacing:.05em; margin-bottom:5px;}
+  .stat-value{font-family:'JetBrains Mono',monospace; font-size:16px; font-weight:600;}
+
+  .bars{display:flex; align-items:flex-end; gap:8px; height:110px; margin-top:16px;}
+  .bar-col{flex:1; display:flex; flex-direction:column; align-items:center; gap:6px; height:100%; justify-content:flex-end;}
+  .bar{width:100%; border-radius:5px 5px 2px 2px; background:var(--blue); min-height:3px; transition:height .3s;}
+  .bar.neg{background:var(--red);}
+  .bar-label{font-size:10px; color:var(--text-faint);}
+
+  .week-row{display:flex; justify-content:space-between; align-items:center; padding:11px 4px; border-bottom:1px solid var(--border-soft);}
+  .week-row:last-child{border-bottom:none;}
+  .week-name{font-size:13px; font-weight:600; color:var(--text-dim);}
+  .week-trades{font-size:11.5px; color:var(--text-faint); margin-top:2px;}
+
+  /* Modal */
+  .modal-backdrop{position:fixed; inset:0; background:rgba(4,7,14,0.55); backdrop-filter:blur(2px); display:flex; align-items:flex-start; justify-content:center; padding:40px 20px; overflow-y:auto; z-index:50;}
+  .modal{background:var(--surface); border:1px solid var(--border); border-radius:16px; width:100%; max-width:640px; padding:24px; box-shadow:var(--shadow); animation:pop .15s ease; box-sizing:border-box;}
+  @keyframes pop{from{transform:translateY(6px); opacity:0;} to{transform:translateY(0); opacity:1;}}
+  .modal-head{display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:16px; gap:10px;}
+  .modal-close{background:none; border:none; color:var(--text-dim); font-size:20px; line-height:1; flex-shrink:0;}
+  .trade-summary-strip{display:flex; gap:14px 18px; flex-wrap:wrap; background:var(--surface-2); border:1px solid var(--border-soft); border-radius:10px; padding:12px 14px; margin-bottom:18px; font-size:12.5px;}
+  .trade-summary-strip div span{display:block; color:var(--text-faint); font-size:10.5px; text-transform:uppercase; letter-spacing:.04em; margin-bottom:2px;}
+
+  select.dropbox{width:100%;}
+
+  .toast{position:fixed; bottom:24px; right:24px; background:var(--surface-3); border:1px solid var(--border); color:var(--text); padding:12px 16px; border-radius:10px; font-size:13px; box-shadow:var(--shadow); z-index:80; animation:pop .15s ease; max-width:calc(100vw - 48px);}
+
+  /* Multi-select chips — chips live inside the same box as the text input, custom dropdown below (not the native browser popup) */
+  .multiselect{display:flex; flex-direction:column; position:relative;}
+  .ms-box{
+    display:flex; flex-wrap:wrap; align-items:center; gap:6px;
+    background:var(--surface-2); border:1px solid var(--border); border-radius:8px;
+    padding:6px 8px; cursor:text; transition:border-color .15s;
+  }
+  .ms-box:focus-within{border-color:var(--blue);}
+  .ms-box > .chips-slot{display:contents;}
+  .chip{display:inline-flex; align-items:center; gap:6px; background:var(--blue-dim); color:var(--blue-2); font-size:12px; font-weight:600; padding:4px 6px 4px 10px; border-radius:99px; max-width:100%; flex-shrink:0;}
+  .chip-x{background:none; border:none; color:inherit; font-size:14px; line-height:1; padding:0 2px; opacity:.75; flex-shrink:0;}
+  .chip-x:hover{opacity:1;}
+  .ms-inline-input{
+    flex:1 1 90px; min-width:90px; border:none !important; background:transparent !important;
+    padding:4px 2px !important; font-size:13.5px; outline:none;
+  }
+  .ms-caret{
+    background:none; border:none; color:var(--text-faint); flex-shrink:0; display:flex; align-items:center;
+    justify-content:center; width:22px; height:22px; border-radius:6px; transition:transform .15s, color .15s;
+  }
+  .ms-caret:hover{color:var(--text);}
+  .ms-caret.open{transform:rotate(180deg); color:var(--blue-2);}
+  .opt-tag{color:var(--text-faint); font-weight:500; text-transform:none; letter-spacing:0;}
+  .ms-panel{
+    display:none; position:absolute; left:0; right:0; top:calc(100% + 6px);
+    background:var(--surface-3); border:1px solid var(--border); border-radius:10px;
+    box-shadow:var(--shadow); max-height:220px; overflow-y:auto; z-index:20; padding:6px;
+  }
+  .ms-panel.open{display:block;}
+  .ms-opt{
+    display:flex; align-items:center; gap:8px; width:100%; text-align:left; background:none; border:none;
+    padding:9px 10px; border-radius:7px; font-size:13px; color:var(--text); white-space:normal;
+  }
+  .ms-opt:hover{background:var(--surface-2);}
+  .ms-opt.sel{color:var(--blue-2); font-weight:600;}
+  .ms-opt-check{width:16px; height:16px; border-radius:5px; border:1.5px solid var(--border); flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:11px;}
+  .ms-opt.sel .ms-opt-check{background:var(--blue); border-color:var(--blue); color:#fff;}
+  .ms-opt-custom{color:var(--blue-2); font-weight:600;}
+  .ms-empty{padding:10px; font-size:12.5px; color:var(--text-faint);}
+
+  /* Custom confirm dialog (used instead of window.confirm, which some embedded views block) */
+  .confirm-box{max-width:360px; text-align:center;}
+  .confirm-box .btn{min-width:100px;}
+
+  @media (max-width:880px){
+    .sidebar{position:fixed; z-index:45; transform:translateX(-100%); transition:transform .2s;}
+    .sidebar.open{transform:translateX(0);}
+    .main{padding:70px 14px 40px;}
+    .form-grid{grid-template-columns:1fr;}
+    .stat-grid{grid-template-columns:repeat(2,1fr);}
+  }
+  @media (max-width:560px){
+    .main{padding:64px 10px 40px;}
+    .card{padding:14px;}
+    .page-title{font-size:19px;}
+    .modal-backdrop{padding:0;}
+    .modal{border-radius:0; max-width:100%; min-height:100vh; padding:18px 14px 40px;}
+    .trade-summary-strip{gap:10px 14px; font-size:12px;}
+    input,select,textarea{font-size:16px;} /* prevents iOS auto-zoom on focus */
+    .stat-grid{grid-template-columns:repeat(2,1fr); gap:8px;}
+  }
+  .mobile-bar{display:none; position:fixed; top:0; left:0; right:0; height:52px; background:var(--surface); border-bottom:1px solid var(--border); align-items:center; padding:0 12px; z-index:41; gap:9px;}
+  .mobile-bar .icon-btn{flex-shrink:0;}
+  .mobile-logo{flex-shrink:0; width:24px; height:24px; display:flex; align-items:center; justify-content:center;}
+  .mobile-logo svg{width:24px; height:24px; display:block;}
+  .mobile-brand-text{display:flex; flex-direction:column; min-width:0; overflow:hidden;}
+  .mobile-brand-text .brand-word{font-size:16px; white-space:nowrap;}
+  .mobile-brand-text .brand-tagline{white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  @media (max-width:880px){.mobile-bar{display:flex;}}
+  .mobile-bar.dimmed{visibility:hidden;}
+  .sidebar-overlay{display:none; position:fixed; inset:0; background:rgba(4,7,14,0.5); z-index:44;}
+  .sidebar-overlay.open{display:block;}
+  .sidebar-close-btn{display:none;}
+  @media (max-width:880px){
+    .sidebar-close-btn{display:flex; align-items:center; justify-content:center; margin-left:auto; background:none; border:none; color:var(--text-dim); font-size:20px; line-height:1; padding:4px 6px; flex-shrink:0;}
+  }
+  @media (max-width:340px){.mobile-brand-text .brand-tagline{display:none;}}
+
+  /* ---------------- Auth screen ---------------- */
+  .auth-screen{position:fixed; inset:0; background:var(--bg); z-index:100; display:flex; align-items:center; justify-content:center; padding:20px;}
+  .auth-card{width:100%; max-width:380px; background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:28px 26px; box-shadow:var(--shadow);}
+  .auth-brand{display:flex; align-items:center; gap:10px; margin-bottom:22px;}
+  .auth-title{font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:17px; margin-bottom:4px;}
+  .auth-sub{color:var(--text-dim); font-size:12.5px; margin-bottom:20px; line-height:1.5;}
+  .auth-field{margin-bottom:12px;}
+  .auth-field input{width:100%;}
+  .auth-error{color:var(--red); font-size:12.5px; margin-bottom:10px; display:none;}
+  .auth-error.show{display:block;}
+  .auth-btn-row{display:flex; flex-direction:column; gap:8px; margin-top:6px;}
+  .auth-switch{text-align:center; margin-top:16px; font-size:12.5px; color:var(--text-dim);}
+  .auth-switch a{color:var(--blue-2); cursor:pointer; text-decoration:none;}
+</style>
+<!-- Firebase (only used if FIREBASE_CONFIG below is filled in — see README) -->
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
+</head>
+<body>
+<div class="mobile-bar">
+  <button class="icon-btn" id="menuToggle">☰</button>
+  <span class="mobile-logo"><svg width="24" height="24" viewBox="0 0 40 40" fill="none"><path d="M8 8L8 30L14 33L20 30L20 8L14 5Z" fill="url(#gMobile)"/><rect x="16" y="19" width="4.5" height="10" rx="1" fill="#a9c6ff"/><rect x="22" y="14" width="4.5" height="15" rx="1" fill="#6ea6ff"/><rect x="28" y="10" width="4.5" height="19" rx="1" fill="#dbe8ff"/><defs><linearGradient id="gMobile" x1="8" y1="5" x2="20" y2="33"><stop stop-color="#2f5fd8"/><stop offset="1" stop-color="#0d2c8f"/></linearGradient></defs></svg></span>
+  <span class="mobile-brand-text">
+    <span class="brand-word">Log<span>wise</span></span>
+    <span class="brand-tagline">Log · Reflect · Improve</span>
+  </span>
+  <button class="icon-btn" id="mobileThemeToggle" style="margin-left:auto;" title="Toggle light/dark"></button>
+</div>
+<div class="app-shell">
+  <div class="sidebar-overlay" id="sidebarOverlay"></div>
+  <aside class="sidebar" id="sidebar"></aside>
+  <main class="main" id="main"></main>
+</div>
+<div id="authScreenRoot"></div>
+
+<script>
+/* =========================================================================
+   LOGWISE — trading journal SPA
+   ========================================================================= */
+
+const ICONS = {
+  logo: `<svg width="26" height="26" viewBox="0 0 40 40" fill="none"><path d="M8 8 L20 8 L20 32 L20 8" stroke="none"/><path d="M8 8L8 30L14 33L20 30L20 8L14 5Z" fill="url(#g1)"/><rect x="16" y="19" width="4.5" height="10" rx="1" fill="#a9c6ff"/><rect x="22" y="14" width="4.5" height="15" rx="1" fill="#6ea6ff"/><rect x="28" y="10" width="4.5" height="19" rx="1" fill="#dbe8ff"/><defs><linearGradient id="g1" x1="8" y1="5" x2="20" y2="33"><stop stop-color="#2f5fd8"/><stop offset="1" stop-color="#0d2c8f"/></linearGradient></defs></svg>`,
+  crypto: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M9.5 8.5h3.2a1.8 1.8 0 010 3.6H9.5m0 0h3.6a1.9 1.9 0 010 3.8H9.5m0-7.4V7m0 9v1.4m3-10.4V7m0 9v1.4"/></svg>`,
+  fx: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 8h13M17 8l-3-3M17 8l-3 3M20 16H7M7 16l3-3M7 16l3 3"/></svg>`,
+  perf: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>`,
+  terminal: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9l3 3-3 3M13 15h4"/></svg>`,
+  manual: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 5v14M5 12h14"/></svg>`,
+  sun: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2M12 20v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M2 12h2M20 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"/></svg>`,
+  moon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 14.5A8.5 8.5 0 119.5 4a7 7 0 0010.5 10.5z"/></svg>`,
+  upload: `<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 16V4M12 4l-4 4M12 4l4 4M5 16v2a2 2 0 002 2h10a2 2 0 002-2v-2"/></svg>`,
+  empty: `<svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M8 10h8M8 14h5"/></svg>`,
+  chevL: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M15 6l-6 6 6 6"/></svg>`,
+  chevR: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 6l6 6-6 6"/></svg>`,
+  trash: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16M9 7V4.5a1 1 0 011-1h4a1 1 0 011 1V7M6 7l1 13a1.5 1.5 0 001.5 1.5h7a1.5 1.5 0 001.5-1.5l1-13"/></svg>`,
+  chevDown: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M6 9l6 6 6-6"/></svg>`,
+  settings: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09a1.65 1.65 0 00-1-1.51 1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09a1.65 1.65 0 001.51-1 1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>`,
+  account: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>`,
+};
+
+const OPTS = {
+  whichPlan: ["A+ Setup", "A Setup", "B Setup", "I didn't follow my plan"],
+  confluences: ["HTF POI Mitigation", "LTF POI Mitigation", "OB + FVG", "Liquidity Sweep"],
+  mistakes: ["Entered too late", "FOMO Entry", "Impatience", "No liquidity sweep", "No clear market direction", "Trading against bias"],
+  entryEmotion: ["Calm", "Forward", "Bored", "Revenge", "Fear", "Greed", "Confident", "Relaxed"],
+  exitEmotion: ["Satisfied", "Regretful", "Discontented", "Contented", "Relaxed", "Pained"],
+};
+
+const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+const DOW = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+
+let state = {
+  theme: "dark",
+  market: "crypto",
+  view: "terminal",       // terminal | performance | manual
+  trades: { crypto: [], fx: [] },
+  calMonth: new Date().getMonth(),
+  calYear: new Date().getFullYear(),
+  reviewingId: null,
+  dayModal: null,         // {dateStr}
+};
+
+/* ---------------- storage ----------------
+   Uses the Claude artifact storage API when available (window.storage).
+   Falls back to the browser's own localStorage when this file is opened
+   outside of Claude (e.g. hosted on GitHub Pages, or opened locally) —
+   that fallback keeps every user's data on their own device only; it is
+   never sent anywhere or shared with anyone else who opens the same page. */
+const hasArtifactStorage = (typeof window !== 'undefined') && !!window.storage && typeof window.storage.get === 'function';
+
+/* ---------------- shared screenshot reader (optional) ----------------
+   If you deploy the small proxy in worker.js (see README) and put its URL
+   here, EVERY visitor's screenshot uploads are read automatically — no one
+   needs their own API key. worker.js proxies to Google Gemini's free-tier
+   vision API, so this can stay genuinely free (Gemini's free tier renews
+   daily rather than draining a one-time credit). Your key stays private on
+   the server side of that proxy; it is never shipped to the browser.
+   Leave this as '' to fall back to a personal-API-key Settings screen
+   instead (each person supplies their own free Gemini key). */
+const PROXY_URL = '';
+const needsOwnKey = !hasArtifactStorage && !PROXY_URL;
+
+/* ---------------- accounts (optional) ----------------
+   Fill this in with your own Firebase project's config to turn on real
+   user accounts: each person signs up/logs in with email+password and
+   their journal follows them to any device or browser — no re-uploading,
+   no local-only data. See README for the one-time setup (create a free
+   Firebase project, enable Email/Password auth, enable Firestore, paste
+   the config below, add the security rules from the README).
+   These values are NOT secret — Firebase config is meant to be public in
+   client code; the database itself is protected by Firestore security
+   rules, not by hiding this object. Leave apiKey empty to skip accounts
+   entirely and keep the previous local-only (per-device) behavior. */
+const FIREBASE_CONFIG = {
+  apiKey: 'AIzaSyDkYn9yZfig_irCLhhzuWakzbBdiMz-Px0',
+  authDomain: 'logwise-31af5.firebaseapp.com',
+  projectId: 'logwise-31af5',
+  storageBucket: 'logwise-31af5.firebasestorage.app',
+  messagingSenderId: '1054027763342',
+  appId: '1:1054027763342:web:7caa844e30fa01771343df'
+};
+const hasFirebase = !!(FIREBASE_CONFIG.apiKey && typeof firebase !== 'undefined');
+let fbAuth = null, fbDb = null, currentUser = null;
+if(hasFirebase){
+  firebase.initializeApp(FIREBASE_CONFIG);
+  fbAuth = firebase.auth();
+  fbDb = firebase.firestore();
+}
+
+async function firestoreLoad(uid){
+  try{
+    const doc = await fbDb.collection('logwise_users').doc(uid).get();
+    return doc.exists ? doc.data() : null;
+  }catch(e){ console.error(e); return null; }
+}
+async function firestoreSave(uid, data){
+  try{
+    await fbDb.collection('logwise_users').doc(uid).set(
+      { ...data, updatedAt: firebase.firestore.FieldValue.serverTimestamp() },
+      { merge: true }
+    );
+    return true;
+  }catch(e){ console.error(e); return false; }
+}
+
+/* Fires whenever Firebase's sign-in state resolves or changes (including
+   automatically on page load if this browser was already signed in). */
+async function handleAuthStateChange(user){
+  const wasLoggedIn = !!currentUser;
+  currentUser = user;
+  if(user){
+    if(wasLoggedIn){
+      // Switching directly from one account to another in the same
+      // session — clear first so nothing from the previous account can
+      // possibly bleed into (or get seeded onto) the new one.
+      state.trades = { crypto: [], fx: [] };
+    }
+    const cloudData = await firestoreLoad(user.uid);
+    if(cloudData){
+      // An account already has data in the cloud — that becomes the source
+      // of truth on this device from now on.
+      state.trades = cloudData.trades ? (()=>{ try{ return JSON.parse(cloudData.trades); }catch(e){ return { crypto: [], fx: [] }; } })() : { crypto: [], fx: [] };
+      if(cloudData.theme){ state.theme = cloudData.theme; document.documentElement.setAttribute('data-theme', state.theme); }
+    } else {
+      // First time this account has ever signed in — seed the cloud with
+      // whatever's currently loaded locally (only meaningful the very first
+      // time this happens in a session, e.g. a returning local-only user
+      // signing up for the first time; if this is a same-session account
+      // switch, state.trades was already cleared above, so this correctly
+      // seeds the new account with nothing rather than the old account's data).
+      await firestoreSave(user.uid, { trades: JSON.stringify(state.trades), theme: state.theme });
+    }
+  } else if(wasLoggedIn){
+    // Explicit sign-out — wipe the journal from view immediately, no page
+    // refresh needed, so nothing from that account stays visible.
+    state.trades = { crypto: [], fx: [] };
+  }
+  render();
+}
+if(hasFirebase){
+  fbAuth.onAuthStateChanged(handleAuthStateChange);
+}
+
+async function storageGet(key){
+  if(hasArtifactStorage){
+    try{ return await window.storage.get(key, false); }catch(e){ return null; }
+  }
+  try{
+    const v = localStorage.getItem('logwise:'+key);
+    return v!==null ? { key, value: v } : null;
+  }catch(e){ return null; }
+}
+async function storageSet(key, value){
+  if(hasArtifactStorage){
+    try{ return await window.storage.set(key, value, false); }catch(e){ return null; }
+  }
+  try{
+    localStorage.setItem('logwise:'+key, value);
+    return { key, value };
+  }catch(e){ return null; }
+}
+
+async function loadState(){
+  try{
+    const t = await storageGet('logwise-trades');
+    if(t && t.value) state.trades = JSON.parse(t.value);
+  }catch(e){ /* no saved trades yet */ }
+  try{
+    const th = await storageGet('logwise-theme');
+    if(th && th.value) state.theme = th.value;
+  }catch(e){ /* default theme */ }
+  document.documentElement.setAttribute('data-theme', state.theme);
+}
+async function persistTrades(){
+  if(hasFirebase && currentUser){
+    const ok = await firestoreSave(currentUser.uid, { trades: JSON.stringify(state.trades) });
+    if(!ok) showToast('Could not sync — check your connection and try again.');
+    return;
+  }
+  const res = await storageSet('logwise-trades', JSON.stringify(state.trades));
+  if(!res) showToast('Could not save — data kept in this session only.');
+}
+async function getApiKey(){
+  const k = await storageGet('logwise-gemini-key');
+  return k && k.value ? k.value : '';
+}
+async function setApiKey(key){
+  return storageSet('logwise-gemini-key', key);
+}
+function customConfirm(message){
+  return new Promise(resolve=>{
+    const backdrop = document.createElement('div');
+    backdrop.className = 'modal-backdrop';
+    backdrop.style.zIndex = '95';
+    backdrop.style.alignItems = 'center';
+    backdrop.innerHTML = `
+      <div class="modal confirm-box">
+        <div style="font-weight:700; font-family:'Space Grotesk',sans-serif; font-size:15px; margin-bottom:8px;">Delete this trade?</div>
+        <div style="color:var(--text-dim); font-size:13.5px; margin-bottom:20px;">${esc(message)}</div>
+        <div style="display:flex; gap:10px; justify-content:center;">
+          <button class="btn btn-ghost" id="cc_cancel">Cancel</button>
+          <button class="btn btn-primary" id="cc_ok" style="background:var(--red);">Delete</button>
+        </div>
+      </div>`;
+    document.body.appendChild(backdrop);
+    const finish = (val)=>{ backdrop.remove(); resolve(val); };
+    document.getElementById('cc_cancel').onclick = ()=> finish(false);
+    document.getElementById('cc_ok').onclick = ()=> finish(true);
+    backdrop.onclick = (e)=>{ if(e.target===backdrop) finish(false); };
+  });
+}
+
+async function openAccount(){
+  const existing = document.getElementById('accountBackdrop');
+  if(existing) existing.remove();
+  const backdrop = document.createElement('div');
+  backdrop.id = 'accountBackdrop';
+  backdrop.className = 'modal-backdrop';
+  backdrop.style.zIndex = '92';
+
+  if(currentUser){
+    backdrop.innerHTML = `
+      <div class="modal" style="max-width:420px;">
+        <div class="modal-head">
+          <div style="font-weight:700; font-family:'Space Grotesk',sans-serif; font-size:16px;">Account</div>
+          <button class="modal-close" id="accountClose">×</button>
+        </div>
+        <div style="font-size:13px; color:var(--text-dim); margin-bottom:18px; line-height:1.5;">
+          Signed in as <strong style="color:var(--text);">${esc(currentUser.email)}</strong>. Your journal is synced to this account — log in with the same email on any device to see it there too.
+        </div>
+        <button class="btn btn-ghost" id="accountLogout" style="color:var(--red);">Log out</button>
+      </div>`;
+    document.body.appendChild(backdrop);
+    backdrop.onclick = (e)=>{ if(e.target===backdrop) backdrop.remove(); };
+    document.getElementById('accountClose').onclick = ()=> backdrop.remove();
+    document.getElementById('accountLogout').onclick = async ()=>{
+      // Wipe the journal and signed-in state from view immediately — don't
+      // wait on the network round-trip of signOut() before the UI reflects it.
+      state.trades = { crypto: [], fx: [] };
+      currentUser = null;
+      backdrop.remove();
+      render();
+      await fbAuth.signOut();
+      showToast('Logged out.');
+    };
+    return;
+  }
+
+  backdrop.innerHTML = `
+    <div class="modal" style="max-width:420px;">
+      <div class="modal-head">
+        <div style="font-weight:700; font-family:'Space Grotesk',sans-serif; font-size:16px;">Sign in</div>
+        <button class="modal-close" id="accountClose">×</button>
+      </div>
+      <div style="font-size:12.5px; color:var(--text-dim); margin-bottom:16px; line-height:1.5;">
+        Sign in to sync your journal across every device — or create an account below if this is your first time here.
+      </div>
+      <div class="field" style="margin-bottom:10px;">
+        <label>Email</label>
+        <input type="email" id="acc_email" placeholder="you@example.com" autocomplete="email">
+      </div>
+      <div class="field" style="margin-bottom:10px;">
+        <label>Password</label>
+        <input type="password" id="acc_password" placeholder="At least 6 characters" autocomplete="current-password">
+      </div>
+      <div id="accountError" style="color:var(--red); font-size:12.5px; margin-bottom:10px; display:none;"></div>
+      <div style="display:flex; gap:10px; flex-wrap:wrap;">
+        <button class="btn btn-primary" id="acc_login">Log in</button>
+        <button class="btn btn-ghost" id="acc_signup">Create account</button>
+      </div>
+    </div>`;
+  document.body.appendChild(backdrop);
+  backdrop.onclick = (e)=>{ if(e.target===backdrop) backdrop.remove(); };
+  document.getElementById('accountClose').onclick = ()=> backdrop.remove();
+
+  function showAccErr(msg){
+    const el = document.getElementById('accountError');
+    el.textContent = msg;
+    el.style.display = 'block';
+  }
+
+  document.getElementById('acc_login').onclick = async ()=>{
+    const email = document.getElementById('acc_email').value.trim();
+    const pw = document.getElementById('acc_password').value;
+    if(!email || !pw){ showAccErr('Enter your email and password.'); return; }
+    try{
+      await fbAuth.signInWithEmailAndPassword(email, pw);
+      backdrop.remove();
+      showToast('Signed in — syncing your journal…');
+    }catch(e){ showAccErr(e.message || 'Could not sign in.'); }
+  };
+  document.getElementById('acc_signup').onclick = async ()=>{
+    const email = document.getElementById('acc_email').value.trim();
+    const pw = document.getElementById('acc_password').value;
+    if(!email || !pw){ showAccErr('Enter an email and a password.'); return; }
+    if(pw.length < 6){ showAccErr('Password must be at least 6 characters.'); return; }
+    try{
+      await fbAuth.createUserWithEmailAndPassword(email, pw);
+      backdrop.remove();
+      showToast('Account created — you\'re signed in.');
+    }catch(e){ showAccErr(e.message || 'Could not create account.'); }
+  };
+}
+
+async function openSettings(){
+  const existing = document.getElementById('settingsBackdrop');
+  if(existing) existing.remove();
+  const backdrop = document.createElement('div');
+  backdrop.id = 'settingsBackdrop';
+  backdrop.className = 'modal-backdrop';
+  backdrop.style.zIndex = '92';
+  backdrop.innerHTML = `
+    <div class="modal" style="max-width:480px;">
+      <div class="modal-head">
+        <div style="font-weight:700; font-family:'Space Grotesk',sans-serif; font-size:16px;">Settings</div>
+        <button class="modal-close" id="settingsClose">×</button>
+      </div>
+      <div class="section-label">Google Gemini API key</div>
+      <div style="font-size:12.5px; color:var(--text-dim); margin-bottom:12px; line-height:1.55;">
+        Logwise is running as a self-hosted site, so it needs a Google Gemini API key to read trade screenshots automatically. Gemini's free tier covers this at no cost — create a key at
+        <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener" style="color:var(--blue-2);">aistudio.google.com/apikey</a> (no credit card needed).
+        The key is stored only in this browser's local storage on this device — it is never sent anywhere except directly to Google when you upload a screenshot. Nothing else about your journal ever leaves your device.
+      </div>
+      <div class="field">
+        <input type="password" id="settingsKeyInput" placeholder="AIzaSy...">
+      </div>
+      <div style="margin-top:16px; display:flex; gap:10px; align-items:center;">
+        <button class="btn btn-primary" id="settingsSave">Save key</button>
+        <button class="btn btn-ghost" id="settingsClear">Clear key</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(backdrop);
+  const key = await getApiKey();
+  const input = document.getElementById('settingsKeyInput');
+  if(input) input.value = key;
+  backdrop.onclick = (e)=>{ if(e.target===backdrop) backdrop.remove(); };
+  document.getElementById('settingsClose').onclick = ()=> backdrop.remove();
+  document.getElementById('settingsSave').onclick = async ()=>{
+    const v = document.getElementById('settingsKeyInput').value.trim();
+    await setApiKey(v);
+    showToast(v ? 'API key saved to this browser.' : 'API key cleared.');
+    backdrop.remove();
+  };
+  document.getElementById('settingsClear').onclick = async ()=>{
+    await setApiKey('');
+    document.getElementById('settingsKeyInput').value = '';
+    showToast('API key cleared.');
+  };
+}
+
+async function deleteTrade(id){
+  const ok = await customConfirm('It will be removed from the Trade Terminal and from all Performance stats.');
+  if(!ok) return;
+  const list = state.trades[state.market];
+  const idx = list.findIndex(t=>t.id===id);
+  if(idx===-1) return;
+  list.splice(idx,1);
+  await persistTrades();
+  if(state.reviewingId===id) state.reviewingId=null;
+  showToast('Trade deleted.');
+  render();
+}
+async function persistTheme(){
+  if(hasFirebase && currentUser){
+    await firestoreSave(currentUser.uid, { theme: state.theme });
+    return;
+  }
+  await storageSet('logwise-theme', state.theme);
+}
+
+/* ---------------- helpers ---------------- */
+function uid(){ return 'tr_' + Math.random().toString(36).slice(2,10) + Date.now().toString(36); }
+function fmtMoney(n, withSign){
+  if(n===null||n===undefined||n==='') return '—';
+  const num = Number(n);
+  if(isNaN(num)) return '—';
+  const sign = withSign && num>0 ? '+' : (num<0 ? '-' : '');
+  const s = Math.abs(num).toFixed(2);
+  return sign + '$' + s;
+}
+function pnlClass(n){ const num=Number(n); if(isNaN(num)) return ''; return num>0?'pnl-pos':(num<0?'pnl-neg':''); }
+function hasVal(v){ return Array.isArray(v) ? v.length>0 : !!(v && String(v).trim()); }
+function reviewComplete(r){
+  if(!r) return false;
+  // "mistake" is optional — every other field is required
+  return !!(r.followed!==null && r.followed!==undefined && hasVal(r.whichPlan) && hasVal(r.confluence) && hasVal(r.tradeManagement) && hasVal(r.entryEmotion) && hasVal(r.exitEmotion) && hasVal(r.note));
+}
+function currentTrades(){ return state.trades[state.market]; }
+function showToast(msg){
+  const el = document.createElement('div');
+  el.className='toast'; el.textContent=msg;
+  document.body.appendChild(el);
+  setTimeout(()=>el.remove(), 3200);
+}
+function esc(s){ return (s===undefined||s===null)?'':String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+/* Mobile sidebar drawer open/close — shared so every trigger (hamburger,
+   overlay tap, close button, or auto-close on nav select) stays in sync. */
+function openSidebarMenu(){
+  document.getElementById('sidebar')?.classList.add('open');
+  document.getElementById('sidebarOverlay')?.classList.add('open');
+  document.querySelector('.mobile-bar')?.classList.add('dimmed');
+}
+function closeSidebarMenu(){
+  document.getElementById('sidebar')?.classList.remove('open');
+  document.getElementById('sidebarOverlay')?.classList.remove('open');
+  document.querySelector('.mobile-bar')?.classList.remove('dimmed');
+}
+
+/* ---------------- render root ---------------- */
+function render(){
+  renderSidebar();
+  if(state.view==='terminal') renderTerminal();
+  else if(state.view==='performance') renderPerformance();
+  else if(state.view==='manual') renderManual();
+  renderReviewModal();
+  renderDayModal();
+  updateMobileThemeToggle();
+}
+
+function updateMobileThemeToggle(){
+  const btn = document.getElementById('mobileThemeToggle');
+  if(!btn) return;
+  // Shows the icon for the mode you'd switch TO (sun while dark, moon while light).
+  btn.innerHTML = state.theme === 'dark' ? ICONS.sun : ICONS.moon;
+}
+
+function renderSidebar(){
+  const sb = document.getElementById('sidebar');
+  sb.innerHTML = `
+    <div class="brand">${ICONS.logo}<div class="brand-text"><span class="brand-word">Log<span>wise</span></span><span class="brand-tagline">Log · Reflect · Improve</span></div><button class="sidebar-close-btn" id="sidebarCloseBtn" title="Close menu">×</button></div>
+
+    <div class="market-toggle">
+      <button data-market="crypto" class="${state.market==='crypto'?'active':''}">Crypto</button>
+      <button data-market="fx" class="${state.market==='fx'?'active':''}">FX</button>
+    </div>
+
+    <div class="nav-group-label">Workspace</div>
+    <button class="nav-btn ${state.view==='terminal'?'active':''}" data-nav="terminal">${ICONS.terminal}Trade Terminal</button>
+    <button class="nav-btn ${state.view==='performance'?'active':''}" data-nav="performance">${ICONS.perf}Performance</button>
+    <button class="nav-btn ${state.view==='manual'?'active':''}" data-nav="manual">${ICONS.manual}Enter manually</button>
+    ${needsOwnKey? `<button class="nav-btn" data-nav="settings">${ICONS.settings}Settings</button>` : ''}
+    ${hasFirebase? `<button class="nav-btn" data-nav="account">${ICONS.account}${currentUser? esc(currentUser.email.split('@')[0]) : 'Sign in'}</button>` : ''}
+
+    <div class="sidebar-spacer"></div>
+    <div class="theme-toggle">
+      <button class="theme-toggle-btn ${state.theme==='light'?'active':''}" data-theme-btn="light">${ICONS.sun}Light</button>
+      <button class="theme-toggle-btn ${state.theme==='dark'?'active':''}" data-theme-btn="dark">${ICONS.moon}Dark</button>
+    </div>
+  `;
+  sb.querySelectorAll('[data-market]').forEach(b=>b.onclick=()=>{ state.market=b.dataset.market; if(state.view==='manual') state.view='terminal'; render(); });
+  sb.querySelector('[data-nav="terminal"]').onclick=()=>{ state.view='terminal'; render(); };
+  sb.querySelector('[data-nav="performance"]').onclick=()=>{ state.view='performance'; render(); };
+  sb.querySelector('[data-nav="manual"]').onclick=()=>{ state.view='manual'; render(); };
+  sb.querySelector('[data-nav="settings"]')?.addEventListener('click', openSettings);
+  sb.querySelector('[data-nav="account"]')?.addEventListener('click', openAccount);
+  sb.querySelectorAll('[data-theme-btn]').forEach(b=>b.onclick=()=>{
+    state.theme=b.dataset.themeBtn;
+    document.documentElement.setAttribute('data-theme', state.theme);
+    persistTheme();
+    render();
+  });
+  sb.querySelector('#sidebarCloseBtn')?.addEventListener('click', closeSidebarMenu);
+  closeSidebarMenu();
+}
+
+/* ---------------- Trade Terminal ---------------- */
+function renderTerminal(){
+  const trades = currentTrades().slice().sort((a,b)=> (b.date||'').localeCompare(a.date||''));
+  const main = document.getElementById('main');
+  main.innerHTML = `
+    <div class="page-header">
+      <div>
+        <div class="page-title">Trade Terminal <span class="pill ${state.market==='crypto'?'pill-crypto':'pill-fx'}">${state.market}</span></div>
+        <div class="page-sub">Drop a screenshot from any exchange — Logwise reads it and journals the trade automatically.</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="dropzone" id="dropzone">
+        ${ICONS.upload}
+        <div class="dropzone-title">Drag a trade screenshot here, or click to choose a file</div>
+        <div class="dropzone-sub">Works with any exchange layout — futures, spot, or FX platform screenshots.</div>
+        <input type="file" id="fileInput" accept="image/*" style="display:none">
+        <div class="dz-status" id="dzStatus"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div id="tradeList">
+        ${trades.length? trades.map(rowHtml).join('') : `
+          <div class="empty-state">${ICONS.empty}<div>No ${state.market.toUpperCase()} trades yet.</div><div style="font-size:12px;margin-top:2px;">Drop a screenshot above or add one manually.</div></div>
+        `}
+      </div>
+    </div>
+  `;
+
+  function metaItem(k, v){
+    if(v===undefined || v===null || v==='') return '';
+    return `<span class="tc-meta-item"><span class="k">${k}</span><span class="v">${esc(v)}</span></span>`;
+  }
+
+  function rowHtml(t){
+    const done = reviewComplete(t.review);
+    const isFx = t.market === 'fx';
+    const sizeLabel = isFx ? 'Lot size' : 'Leverage';
+    const sizeVal = isFx ? t.lotSize : t.leverage;
+    return `<div class="trade-row" data-id="${t.id}">
+      <div class="tc-top">
+        <div class="tc-left">
+          <span class="side-tag ${/short|sell/i.test(t.side||'')?'side-short':'side-long'}">${esc((t.side||'—')).toUpperCase()}</span>
+          <span class="tc-symbol">${esc(t.symbol||'—')}</span>
+          <span class="tc-date">${t.date||'—'}</span>
+        </div>
+        <div class="tc-right">
+          <span class="review-badge ${done?'review-done':'review-pending'}">${done?'Reviewed':'Needs review'}</span>
+          <button type="button" class="del-btn" data-del="${t.id}" title="Delete trade">${ICONS.trash}</button>
+        </div>
+      </div>
+      <div class="tc-meta">
+        ${!isFx? metaItem('Order amt', t.orderAmount) : ''}
+        ${!isFx? metaItem('Filled amt', t.filledAmount) : ''}
+        ${metaItem('Entry', t.entryPrice)}
+        ${metaItem('Exit', t.exitPrice)}
+        ${!isFx? metaItem('Fee', t.fee) : ''}
+        ${isFx? metaItem('Pips', t.pips) : ''}
+        ${isFx? metaItem('Swap/Comm.', t.swap) : ''}
+        ${metaItem(sizeLabel, sizeVal)}
+        ${!isFx? metaItem('Margin', t.marginMode? (t.marginMode[0].toUpperCase()+t.marginMode.slice(1)) : '') : ''}
+        ${metaItem('Duration', t.duration)}
+      </div>
+      <div class="tc-pnl-row">
+        <span class="tc-pnl-label">PnL</span>
+        <span class="tc-pnl-val ${pnlClass(t.realizedPnL)}">${fmtMoney(t.realizedPnL, true)}</span>
+      </div>
+    </div>`;
+  }
+  document.getElementById('tradeList').querySelectorAll('.trade-row').forEach(r=>{
+    r.onclick=(e)=>{
+      if(e.target.closest('[data-del]')) return;
+      state.reviewingId = r.dataset.id; render();
+    };
+  });
+  document.getElementById('tradeList').querySelectorAll('[data-del]').forEach(b=>{
+    b.onclick = (e)=>{ e.stopPropagation(); deleteTrade(b.dataset.del); };
+  });
+
+  const dz = document.getElementById('dropzone');
+  const fileInput = document.getElementById('fileInput');
+  dz.onclick = (e)=>{ if(e.target.id!=='fileInput') fileInput.click(); };
+  dz.ondragover = (e)=>{ e.preventDefault(); dz.classList.add('dragover'); };
+  dz.ondragleave = ()=> dz.classList.remove('dragover');
+  dz.ondrop = (e)=>{
+    e.preventDefault(); dz.classList.remove('dragover');
+    if(e.dataTransfer.files.length) handleScreenshot(e.dataTransfer.files[0]);
+  };
+  fileInput.onchange = (e)=>{ if(e.target.files.length) handleScreenshot(e.target.files[0]); };
+}
+
+function setDzStatus(msg, isError){
+  const el = document.getElementById('dzStatus');
+  if(!el) return;
+  el.textContent = msg;
+  el.classList.add('show');
+  el.classList.toggle('error', !!isError);
+}
+
+async function handleScreenshot(file){
+  if(!file.type.startsWith('image/')){ setDzStatus('Please drop an image file.', true); return; }
+  if(needsOwnKey){
+    const key = await getApiKey();
+    if(!key){ setDzStatus('Add your Gemini API key in Settings to enable screenshot reading.', true); openSettings(); return; }
+  }
+  setDzStatus('Reading screenshot…');
+  try{
+    const {base64, mediaType} = await fileToBase64(file);
+    setDzStatus('Extracting trade details…');
+    const parsed = await analyzeScreenshot(base64, mediaType);
+    const trade = normalizeParsedTrade(parsed);
+    currentTrades().push(trade);
+    await persistTrades();
+    setDzStatus('Trade journaled ✓');
+    render();
+    setTimeout(()=>{ const s=document.getElementById('dzStatus'); if(s) s.classList.remove('show'); }, 2500);
+  }catch(err){
+    console.error(err);
+    const msg = String((err && err.message) || '');
+    if(msg.includes('missing-api-key')){
+      setDzStatus('Add your Gemini API key in Settings to enable screenshot reading.', true);
+      openSettings();
+    } else {
+      // Surface the real error text (e.g. from Gemini or the proxy) instead
+      // of hiding it — makes diagnosing a bad key/model/proxy config possible
+      // without needing to dig through server-side logs.
+      setDzStatus('Could not read that screenshot' + (msg ? ': ' + msg : '') + ' — try again or add it manually.', true);
+    }
+  }
+}
+
+function fileToBase64(file){
+  return new Promise((resolve,reject)=>{
+    const r = new FileReader();
+    r.onload = ()=> resolve({ base64: r.result.split(',')[1], mediaType: file.type });
+    r.onerror = ()=> reject(new Error('read failed'));
+    r.readAsDataURL(file);
+  });
+}
+
+const EXTRACT_PROMPT = `You are reading a screenshot of a single trade or trade history entry (often two linked entries — an open/close pair for the same position) from a crypto or FX trading exchange app (the exchange could be any platform — Binance, Bybit, OKX, MT4/MT5, a broker app, etc). Extract the trade details and respond with ONLY a raw JSON object, no markdown fences, no commentary. Use this exact schema, using null for anything not visible:
+{
+ "symbol": string|null,
+ "side": string|null,          // "long" or "short" (map buy/long-open to "long", sell/short-open to "short")
+ "orderType": string|null,     // e.g. "Limit", "Stop Loss", "Market"
+ "orderAmount": number|null,   // the order amount / size of the position
+ "filledAmount": number|null,
+ "avgEntryPrice": number|null, // average entry price
+ "avgExitPrice": number|null,  // average exit price
+ "feeOpen": number|null,       // fee charged when the position was opened, if shown separately
+ "feeClose": number|null,      // fee charged when the position was closed, if shown separately
+ "leverage": string|null,      // crypto leverage, e.g. "5x" — only for crypto/futures positions
+ "lotSize": number|null,       // FX lot size (position size in lots, e.g. 0.10) — only for FX positions
+ "marginMode": string|null,    // "cross" or "isolated" — only for crypto/futures positions
+ "pips": number|null,          // FX pips gained/lost on the trade, if shown — only for FX positions
+ "swap": number|null,          // FX swap/rollover or commission charge, if shown — only for FX positions
+ "realizedPnL": number|null,
+ "entryTime": string|null,     // full date+time the position was opened, e.g. "2026-08-26 22:25:18"
+ "exitTime": string|null,      // full date+time the position was closed
+ "date": string|null,          // YYYY-MM-DD, the most relevant/most recent date shown
+ "positionId": string|null,
+ "market": string|null         // "crypto" or "fx", your best guess from the symbol/app
+}
+If the screenshot shows separate opening and closing fee amounts for the same position, put each one in feeOpen/feeClose respectively — do not sum them yourself, that is done afterward. Respond with the JSON object only.`;
+
+/* Free-tier Gemini model used for self-hosted screenshot reading.
+   If this ever needs updating, check https://ai.google.dev/gemini-api/docs/models
+   for the current free-tier Flash-Lite model name/alias. */
+const GEMINI_MODEL = 'gemini-flash-lite-latest';
+
+async function analyzeScreenshot(base64, mediaType){
+  if(hasArtifactStorage){
+    // Running inside Claude — use Claude's vision API directly; auth is
+    // handled transparently by the platform, no key needed here.
+    return analyzeScreenshotClaude(base64, mediaType);
+  }
+  // Running self-hosted — use Google Gemini's vision API. Gemini has an
+  // ongoing free tier (not just a one-time trial credit), so this is the
+  // path that can stay genuinely free indefinitely.
+  return analyzeScreenshotGemini(base64, mediaType);
+}
+
+async function analyzeScreenshotClaude(base64, mediaType){
+  const resp = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model: "claude-sonnet-4-6",
+      max_tokens: 1000,
+      messages: [{
+        role: "user",
+        content: [
+          { type: "image", source: { type: "base64", media_type: mediaType, data: base64 } },
+          { type: "text", text: EXTRACT_PROMPT }
+        ]
+      }]
+    })
+  });
+  const data = await resp.json();
+  if(data && data.error) throw new Error(data.error.message || 'api-error');
+  const textBlock = (data.content||[]).map(b=>b.text||'').join('');
+  const clean = textBlock.replace(/```json|```/g,'').trim();
+  return JSON.parse(clean);
+}
+
+async function analyzeScreenshotGemini(base64, mediaType){
+  const headers = { "Content-Type": "application/json" };
+  let endpoint;
+
+  if(PROXY_URL){
+    // Shared proxy configured — it holds the Gemini key server-side, so no
+    // key is needed from this browser at all.
+    endpoint = PROXY_URL;
+  } else {
+    // No proxy — fall back to a personal Gemini key, entered once in
+    // Settings and kept only in this browser's localStorage.
+    const key = await getApiKey();
+    if(!key) throw new Error('missing-api-key');
+    headers["x-goog-api-key"] = key;
+    endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
+  }
+
+  const resp = await fetch(endpoint, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({
+      contents: [{
+        parts: [
+          { inline_data: { mime_type: mediaType, data: base64 } },
+          { text: EXTRACT_PROMPT }
+        ]
+      }],
+      generationConfig: { responseMimeType: "application/json" }
+    })
+  });
+  const raw = await resp.text();
+  let data;
+  try{ data = JSON.parse(raw); }
+  catch(e){ throw new Error(`Unexpected response (HTTP ${resp.status}): ${raw.slice(0,180)}`); }
+
+  if(data && data.error) throw new Error(`Gemini error (HTTP ${resp.status}): ${data.error.message || 'unknown'}`);
+  if(!resp.ok) throw new Error(`Request failed (HTTP ${resp.status})`);
+
+  const blockReason = data.promptFeedback && data.promptFeedback.blockReason;
+  if(blockReason) throw new Error(`Gemini blocked the response (${blockReason})`);
+
+  const parts = (data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts) || [];
+  const textBlock = parts.map(p=>p.text||'').join('');
+  const clean = textBlock.replace(/```json|```/g,'').trim();
+  if(!clean) throw new Error('Gemini returned an empty response');
+  try{ return JSON.parse(clean); }
+  catch(e){ throw new Error('Could not parse the extracted trade data'); }
+}
+
+function computeDuration(entryTime, exitTime){
+  if(!entryTime || !exitTime) return '';
+  const a = new Date(String(entryTime).replace(' ','T'));
+  const b = new Date(String(exitTime).replace(' ','T'));
+  if(isNaN(a) || isNaN(b)) return '';
+  let diff = Math.abs(b-a)/1000;
+  const h = Math.floor(diff/3600); diff -= h*3600;
+  const mnt = Math.floor(diff/60);
+  if(!h && !mnt) return '<1m';
+  return (h?h+'h ':'') + mnt + 'm';
+}
+
+function normalizeParsedTrade(p){
+  const today = new Date().toISOString().slice(0,10);
+  const feeOpen = (p.feeOpen!==undefined && p.feeOpen!==null && p.feeOpen!=='') ? Number(p.feeOpen) : null;
+  const feeClose = (p.feeClose!==undefined && p.feeClose!==null && p.feeClose!=='') ? Number(p.feeClose) : null;
+  let fee = '';
+  if(feeOpen!==null || feeClose!==null) fee = +(((feeOpen||0) + (feeClose||0)).toFixed(8));
+  else if(p.fee!==undefined && p.fee!==null && p.fee!=='') fee = p.fee;
+
+  return {
+    id: uid(),
+    market: state.market,
+    source: 'screenshot',
+    symbol: p.symbol || 'Unknown',
+    side: (p.side||'').toLowerCase().includes('short') ? 'short' : ((p.side||'').toLowerCase().includes('long')?'long':(p.side||'—')),
+    orderType: p.orderType || '',
+    orderAmount: p.orderAmount ?? '',
+    filledAmount: p.filledAmount ?? '',
+    entryPrice: p.avgEntryPrice ?? '',
+    exitPrice: p.avgExitPrice ?? '',
+    fee: fee,
+    realizedPnL: p.realizedPnL ?? '',
+    leverage: p.leverage || '',
+    lotSize: p.lotSize ?? '',
+    marginMode: p.marginMode || '',
+    entryTime: p.entryTime || '',
+    exitTime: p.exitTime || '',
+    duration: computeDuration(p.entryTime, p.exitTime),
+    date: (p.date && /^\d{4}-\d{2}-\d{2}/.test(p.date)) ? p.date.slice(0,10) : today,
+    time: p.exitTime || '',
+    positionId: p.positionId || '',
+    stopLoss:'', takeProfit:'', cost:'', swap: p.swap ?? '', pips: p.pips ?? '', riskReward:'', rewardPct:'',
+    review: { followed:null, whichPlan:[], confluence:[], mistake:[], tradeManagement:'', riskReward:'', entryEmotion:[], exitEmotion:[], note:'' }
+  };
+}
+
+/* ---------------- Enter manually ---------------- */
+function ffield(id, label, opts){
+  opts = opts || {};
+  const req = opts.required ? ' *' : '';
+  const type = opts.type || 'text';
+  if(opts.select){
+    return `<div class="field"><label>${esc(label)}${req}</label>
+      <select id="${id}">
+        <option value="">Select…</option>
+        ${opts.select.map(o=>`<option value="${o.value}">${esc(o.label)}</option>`).join('')}
+      </select>
+    </div>`;
+  }
+  const step = type==='number' ? ' step="any"' : '';
+  const readonly = opts.readonly ? ' readonly' : '';
+  const ph = opts.placeholder ? ` placeholder="${esc(opts.placeholder)}"` : '';
+  return `<div class="field"><label>${esc(label)}${req}</label><input id="${id}" type="${type}"${step}${ph}${readonly}></div>`;
+}
+
+function renderManual(){
+  const isFx = state.market === 'fx';
+  const main = document.getElementById('main');
+
+  const cryptoFields = `
+    <div class="form-grid">
+      ${ffield('m_side','Direction', {select:[{value:'long',label:'Long / Buy'},{value:'short',label:'Short / Sell'}], required:true})}
+      ${ffield('m_leverage','Leverage', {placeholder:'e.g. 5x'})}
+      ${ffield('m_margin','Margin', {select:[{value:'isolated',label:'Isolated'},{value:'cross',label:'Cross'}]})}
+    </div>
+    <div class="form-grid">
+      ${ffield('m_orderAmount','Order Amount', {type:'number'})}
+      ${ffield('m_filledAmount','Filled Amount', {type:'number'})}
+    </div>
+    <div class="form-grid">
+      ${ffield('m_entryDate','Entry Date', {type:'date', required:true})}
+      ${ffield('m_exitDate','Exit Date', {type:'date', required:true})}
+      ${ffield('m_entryTime','Entry Time', {type:'time'})}
+      ${ffield('m_exitTime','Exit Time', {type:'time'})}
+    </div>
+    <div class="form-grid">
+      ${ffield('m_entryPrice','Average Entry Price', {type:'number', required:true})}
+      ${ffield('m_exitPrice','Average Exit Price', {type:'number', required:true})}
+      ${ffield('m_sl','Stop Loss', {type:'number'})}
+      ${ffield('m_tp','Take Profit', {type:'number'})}
+    </div>
+    <div class="form-grid">
+      ${ffield('m_fees','Fee', {type:'number'})}
+      ${ffield('m_duration','Duration', {readonly:true, placeholder:'Auto-calculated'})}
+      ${ffield('m_pnl','Realized PnL', {type:'number'})}
+      ${ffield('m_rr','Risk to Reward', {placeholder:'e.g. 1:3'})}
+    </div>
+  `;
+
+  const fxFields = `
+    <div class="form-grid">
+      ${ffield('m_side','Direction', {select:[{value:'long',label:'Long / Buy'},{value:'short',label:'Short / Sell'}], required:true})}
+      ${ffield('m_leverage','Lot Size', {placeholder:'e.g. 0.10'})}
+    </div>
+    <div class="form-grid">
+      ${ffield('m_entryDate','Entry Date', {type:'date', required:true})}
+      ${ffield('m_exitDate','Exit Date', {type:'date', required:true})}
+      ${ffield('m_entryTime','Entry Time', {type:'time'})}
+      ${ffield('m_exitTime','Exit Time', {type:'time'})}
+    </div>
+    <div class="form-grid">
+      ${ffield('m_entryPrice','Average Entry Price', {type:'number', required:true})}
+      ${ffield('m_exitPrice','Average Exit Price', {type:'number', required:true})}
+      ${ffield('m_pips','Pips', {type:'number'})}
+      ${ffield('m_swap','Swap / Commission', {type:'number'})}
+    </div>
+    <div class="form-grid">
+      ${ffield('m_duration','Duration', {readonly:true, placeholder:'Auto-calculated'})}
+      ${ffield('m_sl','Stop Loss', {type:'number'})}
+      ${ffield('m_tp','Take Profit', {type:'number'})}
+      ${ffield('m_pnl','Realized PnL', {type:'number'})}
+    </div>
+    <div class="form-grid">
+      ${ffield('m_rr','Risk to Reward', {placeholder:'e.g. 1:3'})}
+    </div>
+  `;
+
+  main.innerHTML = `
+    <div class="page-header">
+      <div>
+        <div class="page-title">Enter Manually <span class="pill ${isFx?'pill-fx':'pill-crypto'}">${state.market}</span></div>
+        <div class="page-sub">Log a trade by hand. It'll be added to the Trade Terminal and your performance stats.</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="form-grid">
+        ${ffield('m_symbol','Symbol', {required:true, placeholder: isFx? 'e.g. EUR/USD' : 'e.g. BTC/USDT'})}
+      </div>
+      ${isFx ? fxFields : cryptoFields}
+      <div style="margin-top:20px; display:flex; gap:10px; align-items:center;">
+        <button class="btn btn-primary" id="m_save" disabled>Add trade</button>
+        <span id="m_hint" style="font-size:12px;color:var(--text-faint);">Fill the fields marked * to enable.</span>
+      </div>
+    </div>
+  `;
+
+  function get(id){ const el = document.getElementById(id); return el ? el.value : ''; }
+
+  function recomputeDuration(){
+    const durEl = document.getElementById('m_duration');
+    if(!durEl) return;
+    const ed = get('m_entryDate'), xd = get('m_exitDate');
+    if(ed && xd){
+      const et = get('m_entryTime') || '00:00';
+      const xt = get('m_exitTime') || '00:00';
+      durEl.value = computeDuration(`${ed} ${et}`, `${xd} ${xt}`);
+    } else {
+      durEl.value = '';
+    }
+  }
+  ['m_entryDate','m_exitDate','m_entryTime','m_exitTime'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(el) el.addEventListener('input', recomputeDuration);
+  });
+
+  const req = ['m_symbol','m_side','m_entryDate','m_exitDate','m_entryPrice','m_exitPrice'];
+  function checkReady(){
+    const ready = req.every(id=> get(id) !== '');
+    const btn = document.getElementById('m_save');
+    btn.disabled = !ready;
+    document.getElementById('m_hint').style.display = ready ? 'none' : 'inline';
+  }
+  main.querySelectorAll('input, select').forEach(el=>{
+    el.addEventListener('input', checkReady);
+    el.addEventListener('change', checkReady);
+  });
+  checkReady();
+
+  document.getElementById('m_save').onclick = async ()=>{
+    const trade = {
+      id: uid(), market: state.market, source:'manual',
+      symbol: get('m_symbol'),
+      side: get('m_side'),
+      orderType:'',
+      orderAmount: isFx ? '' : get('m_orderAmount'),
+      filledAmount: isFx ? '' : get('m_filledAmount'),
+      entryPrice: get('m_entryPrice'),
+      exitPrice: get('m_exitPrice'),
+      fee: isFx ? '' : get('m_fees'),
+      pips: isFx ? get('m_pips') : '',
+      swap: isFx ? get('m_swap') : '',
+      realizedPnL: get('m_pnl'),
+      leverage: isFx ? '' : get('m_leverage'),
+      lotSize: isFx ? get('m_leverage') : '',
+      marginMode: isFx ? '' : get('m_margin'),
+      date: get('m_entryDate'),
+      exitDate: get('m_exitDate'),
+      entryTime: get('m_entryTime'),
+      exitTime: get('m_exitTime'),
+      time: get('m_exitTime'),
+      positionId:'',
+      stopLoss: get('m_sl'),
+      takeProfit: get('m_tp'),
+      cost:'',
+      riskReward: get('m_rr'),
+      rewardPct:'',
+      duration: get('m_duration'),
+      review: { followed:null, whichPlan:[], confluence:[], mistake:[], tradeManagement:'', riskReward:'', entryEmotion:[], exitEmotion:[], note:'' }
+    };
+    currentTrades().push(trade);
+    await persistTrades();
+    showToast('Trade added to ' + state.market.toUpperCase() + ' Trade Terminal.');
+    state.view = 'terminal';
+    render();
+  };
+}
+
+/* ---------------- Performance ---------------- */
+function daysInMonth(y,m){ return new Date(y, m+1, 0).getDate(); }
+function firstWeekdayMon(y,m){ const d = new Date(y,m,1).getDay(); return (d+6)%7; } // 0=Mon
+
+function tradesForDate(dateStr){ return currentTrades().filter(t=>t.date===dateStr); }
+
+function renderPerformance(){
+  const y = state.calYear, m = state.calMonth;
+  const trades = currentTrades();
+
+  const main = document.getElementById('main');
+  main.innerHTML = `
+    <div class="page-header">
+      <div>
+        <div class="page-title">Performance <span class="pill ${state.market==='crypto'?'pill-crypto':'pill-fx'}">${state.market}</span></div>
+        <div class="page-sub">Click a day to see the trades you took.</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="cal-nav">
+        <div style="font-weight:700; font-family:'Space Grotesk',sans-serif; font-size:15px;">${MONTHS[m]} ${y}</div>
+        <div class="cal-nav-btns">
+          <button class="icon-btn" id="calPrev">${ICONS.chevL}</button>
+          <button class="icon-btn" id="calNext">${ICONS.chevR}</button>
+        </div>
+      </div>
+      <div class="cal-grid">
+        ${DOW.map(d=>`<div class="cal-dow">${d}</div>`).join('')}
+        ${calendarCells(y,m,trades)}
+      </div>
+    </div>
+
+    <div class="card">
+      <div style="font-weight:700; font-family:'Space Grotesk',sans-serif; font-size:15px; margin-bottom:4px;">Monthly Summary</div>
+      ${monthlySummaryHtml(y,m,trades)}
+    </div>
+
+    <div class="card">
+      <div style="font-weight:700; font-family:'Space Grotesk',sans-serif; font-size:15px; margin-bottom:4px;">Weekly Breakdown</div>
+      ${weeklyBreakdownHtml(y,m,trades)}
+    </div>
+  `;
+
+  document.getElementById('calPrev').onclick = ()=>{ state.calMonth--; if(state.calMonth<0){state.calMonth=11; state.calYear--;} render(); };
+  document.getElementById('calNext').onclick = ()=>{ state.calMonth++; if(state.calMonth>11){state.calMonth=0; state.calYear++;} render(); };
+  document.querySelectorAll('.cal-cell.has-trades').forEach(c=>{
+    c.onclick = ()=>{ state.dayModal = c.dataset.date; render(); };
+  });
+}
+
+function calendarCells(y,m,trades){
+  const lead = firstWeekdayMon(y,m);
+  const total = daysInMonth(y,m);
+  let html = '';
+  for(let i=0;i<lead;i++) html += `<div class="cal-cell empty"></div>`;
+  for(let day=1; day<=total; day++){
+    const dateStr = `${y}-${String(m+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+    const dayTrades = trades.filter(t=>t.date===dateStr);
+    const pnl = dayTrades.reduce((s,t)=> s + (Number(t.realizedPnL)||0), 0);
+    let cls = 'cal-cell';
+    if(dayTrades.length){ cls += ' has-trades'; cls += pnl>=0 ? ' win' : ' loss'; }
+    html += `<div class="${cls}" data-date="${dateStr}">
+      <div class="cal-daynum">${day}</div>
+      ${dayTrades.length? `<div><div class="cal-pnl">${fmtMoney(pnl,true)}</div><div class="cal-count">${dayTrades.length} trade${dayTrades.length>1?'s':''}</div></div>` : ''}
+    </div>`;
+  }
+  return html;
+}
+
+function monthlySummaryHtml(y,m,allTrades){
+  const trades = allTrades.filter(t=>{ const d=new Date(t.date); return d.getFullYear()===y && d.getMonth()===m; });
+  const wins = trades.filter(t=>Number(t.realizedPnL)>0);
+  const losses = trades.filter(t=>Number(t.realizedPnL)<0);
+  const net = trades.reduce((s,t)=>s+(Number(t.realizedPnL)||0),0);
+  const winRate = trades.length? (wins.length/trades.length*100) : 0;
+  const avgWin = wins.length? wins.reduce((s,t)=>s+Number(t.realizedPnL),0)/wins.length : 0;
+  const avgLoss = losses.length? losses.reduce((s,t)=>s+Number(t.realizedPnL),0)/losses.length : 0;
+  const expectancy = trades.length ? ((winRate/100)*avgWin + (1-winRate/100)*avgLoss) : 0;
+
+  // weekly bars for the bar chart
+  const weeks = weeksOfMonth(y,m);
+  const weekTotals = weeks.map(w => trades.filter(t=>{ const d=+new Date(t.date); return d>=+w.start && d<=+w.end; }).reduce((s,t)=>s+(Number(t.realizedPnL)||0),0));
+  const maxAbs = Math.max(1, ...weekTotals.map(v=>Math.abs(v)));
+
+  if(!trades.length){
+    return `<div class="empty-state">${ICONS.empty}<div>No trades logged in ${MONTHS[m]} yet.</div></div>`;
+  }
+
+  return `
+    <div class="bars">
+      ${weekTotals.map((v,i)=>`
+        <div class="bar-col">
+          <div class="bar ${v<0?'neg':''}" style="height:${Math.max(4,Math.abs(v)/maxAbs*90)}px;"></div>
+          <div class="bar-label">W${i+1}</div>
+        </div>`).join('')}
+    </div>
+    <div class="stat-grid">
+      <div class="stat-box"><div class="stat-label">Net PnL</div><div class="stat-value ${pnlClass(net)}">${fmtMoney(net,true)}</div></div>
+      <div class="stat-box"><div class="stat-label">Win rate</div><div class="stat-value">${winRate.toFixed(1)}%</div></div>
+      <div class="stat-box"><div class="stat-label">Expectancy</div><div class="stat-value">${expectancy.toFixed(3)}</div></div>
+      <div class="stat-box"><div class="stat-label">Total trades</div><div class="stat-value">${trades.length}</div></div>
+      <div class="stat-box"><div class="stat-label">Avg win</div><div class="stat-value pnl-pos">${fmtMoney(avgWin,true)}</div></div>
+      <div class="stat-box"><div class="stat-label">Avg loss</div><div class="stat-value pnl-neg">${fmtMoney(avgLoss,true)}</div></div>
+      <div class="stat-box"><div class="stat-label">Wins</div><div class="stat-value">${wins.length}</div></div>
+      <div class="stat-box"><div class="stat-label">Losses</div><div class="stat-value">${losses.length}</div></div>
+    </div>
+  `;
+}
+
+function weeksOfMonth(y,m){
+  const total = daysInMonth(y,m);
+  const weeks = [];
+  let cur = new Date(y,m,1);
+  while(cur.getMonth()===m){
+    const start = new Date(cur);
+    const end = new Date(cur);
+    end.setDate(end.getDate() + (6 - ((end.getDay()+6)%7)));
+    if(end.getMonth()!==m) end.setDate(total);
+    weeks.push({start, end: new Date(end.getFullYear(),end.getMonth(),end.getDate(),23,59,59)});
+    cur = new Date(end); cur.setDate(cur.getDate()+1);
+  }
+  return weeks;
+}
+
+function weeklyBreakdownHtml(y,m,allTrades){
+  const trades = allTrades.filter(t=>{ const d=new Date(t.date); return d.getFullYear()===y && d.getMonth()===m; });
+  const weeks = weeksOfMonth(y,m);
+  if(!trades.length) return `<div class="empty-state">${ICONS.empty}<div>Nothing to break down yet.</div></div>`;
+  return weeks.map((w,i)=>{
+    const wt = trades.filter(t=>{ const d=+new Date(t.date); return d>=+w.start && d<=+w.end; });
+    const pnl = wt.reduce((s,t)=>s+(Number(t.realizedPnL)||0),0);
+    return `<div class="week-row">
+      <div>
+        <div class="week-name">Week ${i+1}</div>
+        <div class="week-trades">${wt.length} trade${wt.length!==1?'s':''}</div>
+      </div>
+      <div class="mono ${pnlClass(pnl)}" style="font-weight:600;">${wt.length? fmtMoney(pnl,true) : '—'}</div>
+    </div>`;
+  }).join('');
+}
+
+/* ---------------- Day modal ---------------- */
+function renderDayModal(){
+  const existing = document.getElementById('dayModalBackdrop');
+  if(existing) existing.remove();
+  if(!state.dayModal) return;
+  const dateStr = state.dayModal;
+  const trades = tradesForDate(dateStr);
+  const backdrop = document.createElement('div');
+  backdrop.id='dayModalBackdrop'; backdrop.className='modal-backdrop';
+  backdrop.innerHTML = `
+    <div class="modal" style="max-width:560px;">
+      <div class="modal-head">
+        <div>
+          <div style="font-weight:700; font-family:'Space Grotesk',sans-serif; font-size:16px;">${dateStr}</div>
+          <div class="page-sub" style="margin-top:2px;">${trades.length} trade${trades.length!==1?'s':''} · ${state.market.toUpperCase()}</div>
+        </div>
+        <button class="modal-close" id="dayModalClose">×</button>
+      </div>
+      ${trades.length? trades.map(t=>{
+        const isFx = t.market === 'fx';
+        const sizeLabel = isFx ? 'Lot size' : 'Leverage';
+        const sizeVal = isFx ? t.lotSize : t.leverage;
+        const metaBits = [
+          t.orderAmount? `Order ${t.orderAmount}` : '',
+          (t.entryPrice||t.exitPrice)? `${t.entryPrice||'—'} → ${t.exitPrice||'—'}` : '',
+          t.fee? `Fee ${t.fee}` : '',
+          sizeVal? `${sizeLabel} ${sizeVal}` : '',
+          t.duration? t.duration : '',
+        ].filter(Boolean).join(' · ');
+        return `
+        <div class="trade-row" data-id="${t.id}">
+          <div class="tc-top">
+            <div class="tc-left">
+              <span class="side-tag ${/short|sell/i.test(t.side||'')?'side-short':'side-long'}">${esc((t.side||'—')).toUpperCase()}</span>
+              <span class="tc-symbol">${esc(t.symbol)}</span>
+            </div>
+            <div class="tc-right">
+              <span class="mono ${pnlClass(t.realizedPnL)}" style="font-weight:700;">${fmtMoney(t.realizedPnL,true)}</span>
+              <button type="button" class="del-btn" data-del="${t.id}" title="Delete trade">${ICONS.trash}</button>
+            </div>
+          </div>
+          ${metaBits? `<div class="tc-meta"><span class="tc-meta-item">${esc(metaBits)}</span></div>` : ''}
+        </div>`;
+      }).join('') : `<div class="empty-state">No trades on this day.</div>`}
+    </div>
+  `;
+  document.body.appendChild(backdrop);
+  backdrop.onclick = (e)=>{ if(e.target===backdrop){ state.dayModal=null; render(); } };
+  document.getElementById('dayModalClose').onclick = ()=>{ state.dayModal=null; render(); };
+  backdrop.querySelectorAll('.trade-row').forEach(r=> r.onclick = (e)=>{
+    if(e.target.closest('[data-del]')) return;
+    state.dayModal=null; state.reviewingId=r.dataset.id; render();
+  });
+  backdrop.querySelectorAll('[data-del]').forEach(b=> b.onclick = (e)=>{ e.stopPropagation(); deleteTrade(b.dataset.del); });
+}
+
+/* ---------------- Review & Reflection modal ---------------- */
+function renderReviewModal(){
+  const existing = document.getElementById('reviewBackdrop');
+  if(existing) existing.remove();
+  if(!state.reviewingId) return;
+  const trade = currentTrades().find(t=>t.id===state.reviewingId);
+  if(!trade){ state.reviewingId=null; return; }
+  const r = trade.review || { followed:null, whichPlan:[], confluence:[], mistake:[], tradeManagement:'', riskReward:'', entryEmotion:[], exitEmotion:[], note:'' };
+
+  const backdrop = document.createElement('div');
+  backdrop.id='reviewBackdrop'; backdrop.className='modal-backdrop';
+  backdrop.innerHTML = `
+    <div class="modal">
+      <div class="modal-head">
+        <div>
+          <div style="font-weight:700; font-family:'Space Grotesk',sans-serif; font-size:16px;">Review &amp; Reflection</div>
+          <div class="page-sub" style="margin-top:2px;">${esc(trade.symbol)} · ${trade.date||''}</div>
+        </div>
+        <button class="modal-close" id="reviewClose">×</button>
+      </div>
+
+      <div class="trade-summary-strip">
+        <div><span>Side</span>${esc((trade.side||'—')).toUpperCase()}</div>
+        ${trade.market!=='fx'? `<div><span>Order amt</span>${trade.orderAmount||'—'}</div>` : ''}
+        ${trade.market!=='fx'? `<div><span>Filled amt</span>${trade.filledAmount||'—'}</div>` : ''}
+        <div><span>Entry</span>${trade.entryPrice||'—'}</div>
+        <div><span>Exit</span>${trade.exitPrice||'—'}</div>
+        ${trade.market!=='fx'? `<div><span>Fee</span>${trade.fee!==undefined&&trade.fee!==''?trade.fee:'—'}</div>` : ''}
+        ${trade.market==='fx'? `<div><span>Pips</span>${trade.pips!==undefined&&trade.pips!==''?trade.pips:'—'}</div>` : ''}
+        ${trade.market==='fx'? `<div><span>Swap/Comm.</span>${trade.swap!==undefined&&trade.swap!==''?trade.swap:'—'}</div>` : ''}
+        <div><span>${trade.market==='fx'?'Lot size':'Leverage'}</span>${(trade.market==='fx'? trade.lotSize : trade.leverage)||'—'}</div>
+        ${trade.market!=='fx'? `<div><span>Margin</span>${trade.marginMode?trade.marginMode[0].toUpperCase()+trade.marginMode.slice(1):'—'}</div>` : ''}
+        <div><span>Duration</span>${trade.duration||'—'}</div>
+        <div><span>PnL</span><span class="${pnlClass(trade.realizedPnL)}">${fmtMoney(trade.realizedPnL,true)}</span></div>
+      </div>
+
+      <div class="section-label">Plan</div>
+      <div class="check-row" id="chk_followed">
+        <div class="check-box ${r.followed===true?'checked':''}"></div> I followed my trade plan
+      </div>
+      <div class="check-row" id="chk_notfollowed">
+        <div class="check-box ${r.followed===false?'checked':''}"></div> I didn't follow my trade plan
+      </div>
+
+      <div class="form-grid" style="margin-top:8px;">
+        ${renderMultiField('whichPlan','Which plan did you actually follow', OPTS.whichPlan, 'Type or pick — e.g. A+ Setup')}
+        <div class="field">
+          <label>Trade management</label>
+          <input id="f_tm" value="${esc(r.tradeManagement)}" placeholder="e.g. did you hold it to your full TP">
+        </div>
+        <div class="field">
+          <label>Risk to Reward</label>
+          <input id="f_rr" value="${esc(r.riskReward)}" placeholder="e.g 1:3">
+        </div>
+      </div>
+
+      <div class="section-label">Entry confluences</div>
+      ${renderMultiField('confluence', null, OPTS.confluences, 'Type or pick — e.g. HTF POI Mitigation')}
+
+      <div class="section-label">Mistakes <span class="opt-tag">(optional)</span></div>
+      ${renderMultiField('mistake', null, OPTS.mistakes, 'Type or pick — e.g. Impatience')}
+
+      <div class="form-grid" style="margin-top:14px;">
+        ${renderMultiField('entryEmotion','Entry emotions', OPTS.entryEmotion, 'Type or pick — e.g. Calm')}
+        ${renderMultiField('exitEmotion','Exit emotions', OPTS.exitEmotion, 'Type or pick — e.g. Relaxed')}
+      </div>
+
+      <div class="section-label">Reflection</div>
+      <div class="field">
+        <textarea id="f_note" rows="3" placeholder="Add some notes about your reflection">${esc(r.note)}</textarea>
+      </div>
+
+      <div style="margin-top:20px; display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+        <button class="btn btn-primary" id="reviewSave" disabled>Save reflection</button>
+        <button class="btn btn-ghost" id="reviewDelete" style="color:var(--red);">Delete trade</button>
+        <span style="font-size:12px;color:var(--text-faint);" id="reviewHint">Fill the required fields to enable saving.</span>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(backdrop);
+
+  document.getElementById('reviewDelete').onclick = ()=> deleteTrade(trade.id);
+
+  let localFollowed = r.followed;
+
+  function refreshChecks(){
+    document.querySelector('#chk_followed .check-box').classList.toggle('checked', localFollowed===true);
+    document.querySelector('#chk_notfollowed .check-box').classList.toggle('checked', localFollowed===false);
+  }
+  document.getElementById('chk_followed').onclick = ()=>{ localFollowed = (localFollowed===true)? null : true; refreshChecks(); checkReady(); };
+  document.getElementById('chk_notfollowed').onclick = ()=>{ localFollowed = (localFollowed===false)? null : false; refreshChecks(); checkReady(); };
+
+  const msWhichPlan = wireMultiSelect('whichPlan', r.whichPlan||[], OPTS.whichPlan, checkReady);
+  const msConfluence = wireMultiSelect('confluence', r.confluence||[], OPTS.confluences, checkReady);
+  const msMistake = wireMultiSelect('mistake', r.mistake||[], OPTS.mistakes, checkReady);
+  const msEntryEmotion = wireMultiSelect('entryEmotion', r.entryEmotion||[], OPTS.entryEmotion, checkReady);
+  const msExitEmotion = wireMultiSelect('exitEmotion', r.exitEmotion||[], OPTS.exitEmotion, checkReady);
+
+  function checkReady(){
+    const ready = localFollowed!==null && localFollowed!==undefined
+      && msWhichPlan.getValues().length
+      && msConfluence.getValues().length
+      // mistake is optional — not checked here
+      && document.getElementById('f_tm').value.trim()
+      && msEntryEmotion.getValues().length
+      && msExitEmotion.getValues().length
+      && document.getElementById('f_note').value.trim();
+    document.getElementById('reviewSave').disabled = !ready;
+    document.getElementById('reviewHint').style.display = ready ? 'none' : 'inline';
+  }
+  ['f_tm','f_note'].forEach(id=>{
+    document.getElementById(id).addEventListener('input', checkReady);
+  });
+  checkReady();
+
+  backdrop.onclick = (e)=>{ if(e.target===backdrop){ state.reviewingId=null; render(); } };
+  document.getElementById('reviewClose').onclick = ()=>{ state.reviewingId=null; render(); };
+
+  document.getElementById('reviewSave').onclick = async ()=>{
+    trade.review = {
+      followed: localFollowed,
+      whichPlan: msWhichPlan.getValues(),
+      confluence: msConfluence.getValues(),
+      mistake: msMistake.getValues(),
+      tradeManagement: document.getElementById('f_tm').value.trim(),
+      riskReward: document.getElementById('f_rr').value.trim(),
+      entryEmotion: msEntryEmotion.getValues(),
+      exitEmotion: msExitEmotion.getValues(),
+      note: document.getElementById('f_note').value.trim(),
+    };
+    await persistTrades();
+    state.reviewingId = null;
+    showToast('Reflection saved.');
+    render();
+  };
+}
+
+function renderMultiField(id, label, options, placeholder){
+  return `
+    <div class="field field-full">
+      ${label? `<label>${label}</label>` : ''}
+      <div class="multiselect" id="ms_${id}">
+        <div class="ms-box" id="ms_${id}_box">
+          <span class="chips-slot" id="ms_${id}_chips"></span>
+          <input type="text" id="ms_${id}_input" class="ms-inline-input" placeholder="${placeholder}" autocomplete="off">
+          <button type="button" class="ms-caret" id="ms_${id}_caret" tabindex="-1" title="Show/hide options">${ICONS.chevDown}</button>
+        </div>
+        <div class="ms-panel" id="ms_${id}_panel"></div>
+      </div>
+    </div>`;
+}
+
+function wireMultiSelect(id, initialArr, options, onChange){
+  let values = (initialArr||[]).slice();
+  const boxEl = document.getElementById(`ms_${id}_box`);
+  const chipsEl = document.getElementById(`ms_${id}_chips`);
+  const inputEl = document.getElementById(`ms_${id}_input`);
+  const panelEl = document.getElementById(`ms_${id}_panel`);
+  const caretEl = document.getElementById(`ms_${id}_caret`);
+  const basePlaceholder = inputEl.getAttribute('placeholder') || '';
+
+  function renderChips(){
+    chipsEl.innerHTML = values.map(v=>`<span class="chip">${esc(v)}<button type="button" class="chip-x" data-v="${esc(v)}">&times;</button></span>`).join('');
+    chipsEl.querySelectorAll('.chip-x').forEach(b=>{
+      b.onclick = (e)=>{ e.stopPropagation(); values = values.filter(x=>x!==b.dataset.v); renderChips(); onChange(); };
+    });
+    // once at least one option is picked, the hint placeholder is no longer needed
+    inputEl.placeholder = values.length ? '' : basePlaceholder;
+  }
+  function renderPanel(){
+    const q = inputEl.value.trim().toLowerCase();
+    const filtered = options.filter(o=> o.toLowerCase().includes(q));
+    let html = filtered.map(o=>{
+      const sel = values.includes(o);
+      return `<button type="button" class="ms-opt ${sel?'sel':''}" data-v="${esc(o)}"><span class="ms-opt-check">${sel?'✓':''}</span>${esc(o)}</button>`;
+    }).join('');
+    const typed = inputEl.value.trim();
+    if(typed && !options.some(o=>o.toLowerCase()===typed.toLowerCase()) && !values.includes(typed)){
+      html += `<button type="button" class="ms-opt ms-opt-custom" data-custom="1"><span class="ms-opt-check">+</span>Add "${esc(typed)}"</button>`;
+    }
+    if(!html) html = `<div class="ms-empty">Type to add a custom option</div>`;
+    panelEl.innerHTML = html;
+    panelEl.querySelectorAll('.ms-opt[data-v]').forEach(el=>{
+      el.onclick = (e)=>{ e.stopPropagation(); toggle(el.dataset.v); };
+    });
+    const customEl = panelEl.querySelector('.ms-opt[data-custom]');
+    if(customEl) customEl.onclick = (e)=>{ e.stopPropagation(); addCustom(); };
+  }
+  function toggle(v){
+    if(values.includes(v)) values = values.filter(x=>x!==v);
+    else values.push(v);
+    renderChips(); renderPanel(); onChange();
+    inputEl.focus();
+  }
+  function addCustom(){
+    const v = inputEl.value.trim();
+    if(v && !values.includes(v)) values.push(v);
+    inputEl.value = '';
+    renderChips(); renderPanel(); onChange();
+    inputEl.focus();
+  }
+  function openPanel(){ panelEl.classList.add('open'); caretEl.classList.add('open'); renderPanel(); }
+  function closePanel(){ panelEl.classList.remove('open'); caretEl.classList.remove('open'); }
+  function togglePanel(){ panelEl.classList.contains('open') ? closePanel() : openPanel(); }
+
+  boxEl.addEventListener('click', (e)=>{ if(e.target===caretEl) return; inputEl.focus(); openPanel(); });
+  inputEl.addEventListener('focus', openPanel);
+  inputEl.addEventListener('input', ()=> renderPanel());
+  inputEl.addEventListener('keydown', e=>{
+    if(e.key==='Enter' || e.key===','){ e.preventDefault(); addCustom(); }
+    else if(e.key==='Escape'){ closePanel(); }
+    else if(e.key==='Backspace' && !inputEl.value && values.length){ values.pop(); renderChips(); renderPanel(); onChange(); }
+  });
+  caretEl.addEventListener('click', (e)=>{ e.stopPropagation(); togglePanel(); if(panelEl.classList.contains('open')) inputEl.focus(); });
+
+  renderChips();
+  return { getValues: ()=>values };
+}
+
+/* Close any open dropdown panel when clicking outside it — registered once globally */
+document.addEventListener('mousedown', (e)=>{
+  document.querySelectorAll('.ms-panel.open').forEach(p=>{
+    const container = p.closest('.multiselect');
+    if(container && !container.contains(e.target)){
+      p.classList.remove('open');
+      const caret = container.querySelector('.ms-caret');
+      if(caret) caret.classList.remove('open');
+    }
+  });
+});
+
+/* ---------------- mobile menu ---------------- */
+document.getElementById('menuToggle')?.addEventListener('click', ()=>{
+  const sidebar = document.getElementById('sidebar');
+  if(sidebar.classList.contains('open')) closeSidebarMenu();
+  else openSidebarMenu();
+});
+document.getElementById('sidebarOverlay')?.addEventListener('click', closeSidebarMenu);
+
+document.getElementById('mobileThemeToggle')?.addEventListener('click', async ()=>{
+  state.theme = state.theme === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', state.theme);
+  await persistTheme();
+  render();
+});
+
+/* ---------------- boot ---------------- */
+(async function boot(){
+  await loadState();
+  render();
+})();
+</script>
+</body>
+</html>
